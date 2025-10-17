@@ -1,12 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/RSS-Frontend-/', // Exact repository name
+  base: '/RSS-Frontend-/',
   build: {
     outDir: 'dist',
     sourcemap: false,
+    minify: 'terser',
     rollupOptions: {
       input: {
         main: './index.html'
@@ -14,6 +16,11 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000
+    port: 3000,
+    host: true
+  },
+  preview: {
+    port: 4173,
+    host: true
   }
 })
