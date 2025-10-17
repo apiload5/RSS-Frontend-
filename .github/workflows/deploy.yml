@@ -9,26 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 1. Checkout Code
-      # Code ko fetch karein
       uses: actions/checkout@v4
     
     - name: 2. Setup Node.js
-      # Sahi Node.js version set karein
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
+        # ❌ Yeh caching lines hata di hain taaki lock file error na aaye.
+        # cache: 'npm' 
     
-    - name: 3. Install Dependencies (Using npm ci)
-      # ⚠️ FIX: npm ci use karein taaki package-lock.json ka error na aaye. Yeh CI/CD ke liye behtar hai.
-      run: npm ci
+    - name: 3. Install Dependencies
+      # npm ci ki jagah wapas npm install use kiya, taaki bina lock file ke kaam ho jaye.
+      run: npm install 
     
     - name: 4. Build Project
-      # React/Vite project ko build karke 'dist' folder banayein
       run: npm run build
     
     - name: 5. Upload Artifact
-      # Optimized build files ko Pages ke liye upload karein
+      # Latest stable action
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./dist
@@ -47,6 +45,6 @@ jobs:
     steps:
     - name: 6. Deploy to GitHub Pages
       id: deployment
-      # Latest stable deploy action use karein
+      # Latest stable action
       uses: actions/deploy-pages@v5
       
