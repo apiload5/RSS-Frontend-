@@ -3,20 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './',  // ← YEH CHANGE KARO
+  base: '/RSS-Frontend-/',
   build: {
     outDir: 'dist',
     sourcemap: false,
-    assetsDir: 'assets',  // ← YEH ADD KARO
-    rollupOptions: {
-      output: {
-        assetFileNames: 'assets/[name]-[hash][extname]',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js'
-      }
-    }
-  },
-  server: {
-    port: 3000
+    emptyOutDir: true
   }
 })
