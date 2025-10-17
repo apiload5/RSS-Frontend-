@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { HashRouter } from 'react-router-dom'  // Changed to HashRouter
+import { HashRouter } from 'react-router-dom'  // HashRouter use karo
 import App from './components/App.jsx'
 import './styles/index.css'
 
