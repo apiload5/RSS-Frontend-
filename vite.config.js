@@ -7,14 +7,9 @@ export default defineConfig({
   base: '/RSS-Frontend-/',
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    minify: 'terser',
-    rollupOptions: {
-      input: {
-        main: './index.html'
-      }
-    }
+    sourcemap: false
   },
+  // rollupOptions HATA DO - yehi problem hai
   server: {
     port: 3000,
     host: true
