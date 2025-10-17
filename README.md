@@ -2,6 +2,9 @@
 
 A professional RSS feed aggregator built with React and Tailwind CSS. Manage all your RSS feeds in one beautiful, modern interface.
 
+## 🌐 Live Demo
+**[https://your-username.github.io/rss-generator-frontend/](https://your-username.github.io/rss-generator-frontend/)**
+
 ## Features
 
 - 🔐 **User Authentication** - Secure login and registration
@@ -18,9 +21,11 @@ A professional RSS feed aggregator built with React and Tailwind CSS. Manage all
 - **Icons**: Lucide React
 - **Routing**: React Router DOM
 - **Build Tool**: Vite
+- **Deployment**: GitHub Pages
 
-## Getting Started
+## Quick Start
 
-1. **Install dependencies**
+1. **Clone repository**
    ```bash
-   npm install
+   git clone https://github.com/your-username/rss-generator-frontend.git
+   cd rss-generator-frontend
