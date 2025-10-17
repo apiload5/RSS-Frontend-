@@ -1,23 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/rss-generator-frontend/', // GitHub repository name yahan dalo
+  base: '/RSS-Frontend-/', // Exact repository name
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
-    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      input: {
+        main: './index.html'
+      }
+    }
   },
   server: {
-    port: 3000,
-    open: true,
-    host: true
-  },
-  preview: {
-    port: 4173,
-    host: true
+    port: 3000
   }
 })
