@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+// FIX: File resolution error ko theek karne ke liye '../context/AuthContext' ko './context/AuthContext' mein badal diya gaya hai (assuming it's relative to the main app root)
+import { AuthProvider, useAuth } from './context/AuthContext'; 
 import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft } from 'lucide-react';
-import LoginScreen from '../screens/LoginScreen';
-import SignupScreen from '../screens/SignupScreen';
+// FIX: File resolution error ko theek karne ke liye '../screens/' ko './screens/' mein badal diya gaya hai.
+import LoginScreen from './screens/LoginScreen';
+import SignupScreen from './screens/SignupScreen';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev';
 
@@ -205,20 +207,20 @@ const Dashboard = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Your Feeds
+                Aapke Feeds
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Click on a feed to view its items
+                Feed items dekhne ke liye feed par click karein
               </p>
             </div>
             <div className="p-6">
               {loading ? (
-                <LoadingSpinner text="Loading feeds..." />
+                <LoadingSpinner text="Feeds load ho rahe hain..." />
               ) : feeds.length === 0 ? (
                 <div className="text-center py-8">
                   <Rss className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    No feeds yet. Add your first RSS feed to get started!
+                    Abhi koi feeds nahi hain. Shuru karne ke liye pehli RSS feed jodein!
                   </p>
                 </div>
               ) : (
@@ -253,24 +255,24 @@ const Dashboard = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Add New Feed
+                Nayi Feed Jodein
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Subscribe to a new RSS feed
+                Nayi RSS feed subscribe karein
               </p>
             </div>
             <div className="p-6">
               <form onSubmit={handleAddFeed} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Feed Name
+                    Feed Naam
                   </label>
                   <input
                     type="text"
                     value={newFeed.name}
                     onChange={(e) => setNewFeed({ ...newFeed, name: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                    placeholder="e.g., Tech News"
+                    placeholder="Jaise, Tech Khabrein"
                     required
                   />
                 </div>
@@ -284,7 +286,7 @@ const Dashboard = () => {
                     value={newFeed.url}
                     onChange={(e) => setNewFeed({ ...newFeed, url: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                    placeholder="e.g., https://example.com/rss"
+                    placeholder="Jaise, https://example.com/rss"
                     required
                   />
                 </div>
@@ -295,7 +297,7 @@ const Dashboard = () => {
                   className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
                 >
                   <Plus className="w-5 h-5 mr-2" />
-                  {loading ? 'Adding Feed...' : 'Add Feed'}
+                  {loading ? 'Feed Jod rahe hain...' : 'Feed Jodein'}
                 </button>
               </form>
             </div>
@@ -312,12 +314,43 @@ const FeedItemsView = () => {
   const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Gemini State
+  const [summaries, setSummaries] = useState({}); // { index: 'summary text' }
+  const [summaryLoading, setSummaryLoading] = useState({}); // { index: true/false }
+
   const navigate = useNavigate();
   const location = useLocation();
   // FIX: Use useParams to correctly get the route parameter
   const { feedId } = useParams(); 
   
   const feedName = location.state?.feedName || 'Feed';
+
+  // Gemini API Constants
+  const GEMINI_API_KEY = ""; // Canvas will provide this key at runtime
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+
+
+  // Utility for exponential backoff retry logic
+  const fetchWithRetry = async (url, options, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (response.status === 429 && i < retries - 1) {
+          const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error.message || `API call failed with status ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        if (i === retries - 1) throw error;
+      }
+    }
+  };
 
   const apiCall = async (endpoint, options = {}) => {
     setLoading(true);
@@ -365,6 +398,55 @@ const FeedItemsView = () => {
     }
   };
 
+  // -----------------------------------------------------------------
+  // ✨ GEMINI FEATURE: Summarize Article Content
+  // -----------------------------------------------------------------
+  const handleSummarize = async (index, title, link) => {
+    // Agar summary pehle se generate ho chuki hai to kuch na karein
+    if (summaries[index]) return; 
+
+    setSummaryLoading(prev => ({ ...prev, [index]: true }));
+    setSummaries(prev => ({ ...prev, [index]: 'Summary generate ho rahi hai...' }));
+    setError('');
+
+    const systemPrompt = "Aap ek mahir news summarizer hain. Aapka kaam hai di gayi news article ya topic ka 2-3 sentence ka sateek, neutral saaransh (summary) dena. Saaransh ko ground karne ke liye diye gaye URL ka upyog karein.";
+    const userQuery = `Is article ka saaransh dein jiska title yeh hai: "${title}". Source URL hai: ${link}`;
+
+    const payload = {
+        contents: [{ parts: [{ text: userQuery }] }],
+        // Google Search Tool ka upyog karein jisse latest content mil sake
+        tools: [{ "google_search": {} }],
+        systemInstruction: {
+            parts: [{ text: systemPrompt }]
+        },
+    };
+
+    try {
+        const data = await fetchWithRetry(GEMINI_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (generatedText) {
+            setSummaries(prev => ({ ...prev, [index]: generatedText }));
+        } else {
+            setSummaries(prev => ({ ...prev, [index]: 'Summary generate nahi ho saki.' }));
+        }
+
+    } catch (err) {
+        console.error("Gemini API Error:", err);
+        // Error state ko main UI error se alag rakhein
+        setSummaries(prev => ({ ...prev, [index]: `Error: ${err.message}. Please try again.` }));
+    } finally {
+        setSummaryLoading(prev => ({ ...prev, [index]: false }));
+    }
+  };
+  // -----------------------------------------------------------------
+
+
   const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
@@ -386,7 +468,7 @@ const FeedItemsView = () => {
                 className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span>Back to Dashboard</span>
+                <span>Dashboard Par Vaapas Jaayen</span>
               </button>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 {feedName}
@@ -407,21 +489,21 @@ const FeedItemsView = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Latest Items
+                Naye Items
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {feedItems.length} items found
+                {feedItems.length} items mile
               </p>
             </div>
 
             <div className="p-6">
               {loading ? (
-                <LoadingSpinner text="Loading feed items..." />
+                <LoadingSpinner text="Feed items load ho rahe hain..." />
               ) : feedItems.length === 0 ? (
                 <div className="text-center py-8">
                   <Rss className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    No items found in this feed.
+                    Is feed mein koi items nahi mile.
                   </p>
                 </div>
               ) : (
@@ -434,15 +516,39 @@ const FeedItemsView = () => {
                       <h3 className="font-medium text-gray-900 dark:text-white mb-2">
                         {item.title}
                       </h3>
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
-                      >
-                        Read full article
-                        <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
-                      </a>
+                      
+                      {/* Gemini Summary Section */}
+                      {summaries[index] && (
+                          <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                              <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-1">
+                                  ✨ Gemini Saaransh:
+                              </p>
+                              <p className="text-sm text-indigo-600 dark:text-indigo-400 whitespace-pre-wrap">
+                                  {summaries[index]}
+                              </p>
+                          </div>
+                      )}
+
+
+                      <div className="flex items-center justify-between mt-3">
+                          <a
+                              href={item.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
+                          >
+                              Poora Article Padhein
+                              <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
+                          </a>
+
+                          <button
+                              onClick={() => handleSummarize(index, item.title, item.link)}
+                              disabled={summaryLoading[index] || summaries[index]}
+                              className="flex items-center text-xs px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-400 text-white font-semibold transition-colors shadow-md disabled:opacity-70"
+                          >
+                              {summaryLoading[index] ? 'Saaransh Ban Raha Hai...' : summaries[index] ? 'Saaransh Taiyaar' : '✨ Saaransh Banayein'}
+                          </button>
+                      </div>
                     </div>
                   ))}
                 </div>
