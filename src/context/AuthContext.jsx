@@ -1,13 +1,4 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-  onAuthStateChanged
-} from 'firebase/auth';
-import { auth } from '../config/firebase';
 
 const AuthContext = createContext();
 
@@ -21,150 +12,66 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Backend verification function
-  const verifyUserWithBackend = async (firebaseToken) => {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${firebaseToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Backend verification failed');
-      }
-
-      const userData = await response.json();
-      return userData;
-    } catch (error) {
-      console.error('Backend verification error:', error);
-      throw error;
-    }
-  };
-
-  // Sign up with email and password
+  // Mock authentication functions
   const signUp = async (email, password) => {
-    try {
-      setError('');
-      setLoading(true);
-      
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseToken = await userCredential.user.getIdToken();
-      
-      // Verify with backend
-      const userData = await verifyUserWithBackend(firebaseToken);
-      
-      setUser({
-        ...userCredential.user,
-        backendData: userData
-      });
-      
-      return userCredential;
-    } catch (error) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sign in with email and password
-  const signIn = async (email, password) => {
-    try {
-      setError('');
-      setLoading(true);
-      
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseToken = await userCredential.user.getIdToken();
-      
-      // Verify with backend
-      const userData = await verifyUserWithBackend(firebaseToken);
-      
-      setUser({
-        ...userCredential.user,
-        backendData: userData
-      });
-      
-      return userCredential;
-    } catch (error) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sign in with Google
-  const signInWithGoogle = async () => {
-    try {
-      setError('');
-      setLoading(true);
-      
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const firebaseToken = await userCredential.user.getIdToken();
-      
-      // Verify with backend
-      const userData = await verifyUserWithBackend(firebaseToken);
-      
-      setUser({
-        ...userCredential.user,
-        backendData: userData
-      });
-      
-      return userCredential;
-    } catch (error) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Logout
-  const logout = async () => {
-    try {
-      setError('');
-      await signOut(auth);
-      setUser(null);
-    } catch (error) {
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  // Clear error
-  const clearError = () => setError('');
-
-  // Auth state listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const firebaseToken = await user.getIdToken();
-          const userData = await verifyUserWithBackend(firebaseToken);
-          
-          setUser({
-            ...user,
-            backendData: userData
-          });
-        } catch (error) {
-          console.error('Failed to verify user with backend:', error);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
+    setLoading(true);
+    setError('');
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setUser({
+      uid: 'mock-user-123',
+      email: email,
+      displayName: email.split('@')[0],
+      getIdToken: async () => 'mock-firebase-token-12345'
     });
+    
+    setLoading(false);
+  };
 
-    return unsubscribe;
-  }, []);
+  const signIn = async (email, password) => {
+    setLoading(true);
+    setError('');
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setUser({
+      uid: 'mock-user-123',
+      email: email,
+      displayName: email.split('@')[0],
+      getIdToken: async () => 'mock-firebase-token-12345'
+    });
+    
+    setLoading(false);
+  };
+
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    setError('');
+    
+    // Simulate Google sign in
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setUser({
+      uid: 'google-user-123',
+      email: 'google@user.com',
+      displayName: 'Google User',
+      getIdToken: async () => 'mock-google-token-12345'
+    });
+    
+    setLoading(false);
+  };
+
+  const logout = async () => {
+    setUser(null);
+  };
+
+  const clearError = () => setError('');
 
   const value = {
     user,
@@ -179,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
