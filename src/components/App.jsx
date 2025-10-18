@@ -1,37 +1,531 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft } from 'lucide-react';
+import LoginScreen from './screens/LoginScreen';
+import SignupScreen from './screens/SignupScreen';
 
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev';
+
+// Loading Spinner Component
+const LoadingSpinner = ({ size = 'medium', text = 'Loading...' }) => {
+  const sizeClasses = {
+    small: 'w-4 h-4',
+    medium: 'w-8 h-8',
+    large: 'w-12 h-12'
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center space-y-3">
+      <div className={`animate-spin rounded-full border-b-2 border-primary-600 ${sizeClasses[size]}`}></div>
+      {text && <p className="text-gray-500 dark:text-gray-400 text-sm">{text}</p>}
+    </div>
+  );
+};
+
+// Header Component (Same UI)
+const Header = ({ username, onLogout, darkMode, toggleDarkMode }) => {
+  return (
+    <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg">
+              <Rss className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                RSS Generator Pro
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Professional Feed Management
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
+
+            {username && (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">
+                    {username}
+                  </span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+// Dashboard Component (Same UI with Firebase integration)
+const Dashboard = () => {
+  const { user, logout } = useAuth();
+  const [feeds, setFeeds] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [newFeed, setNewFeed] = useState({ name: '', url: '' });
+  const [darkMode, setDarkMode] = useState(false);
+  const navigate = useNavigate();
+
+  const apiCall = async (endpoint, options = {}) => {
+    setLoading(true);
+    setError('');
+
+    const token = await user.getIdToken();
+    
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    if (config.body && typeof config.body === 'object') {
+      config.body = JSON.stringify(config.body);
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Something went wrong');
+      }
+
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFeeds = async () => {
+    try {
+      const data = await apiCall('/api/feeds');
+      setFeeds(data);
+    } catch (err) {
+      // Error handled in apiCall
+    }
+  };
+
+  const handleAddFeed = async (e) => {
+    e.preventDefault();
+    try {
+      await apiCall('/api/feeds/add', {
+        method: 'POST',
+        body: newFeed,
+      });
+
+      setNewFeed({ name: '', url: '' });
+      setSuccess('Feed added successfully!');
+      fetchFeeds();
+    } catch (err) {
+      // Error handled in apiCall
+    }
+  };
+
+  const handleFeedClick = (feedId, feedName) => {
+    navigate(`/feeds/${feedId}`, { state: { feedName } });
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchFeeds();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Get username from Firebase user
+  const username = user?.email?.split('@')[0] || user?.displayName || 'User';
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header 
+        username={username} 
+        onLogout={logout}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
+
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-0 mb-6">
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-700 dark:text-red-400">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-green-700 dark:text-green-400">{success}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-4 sm:px-0">
+          {/* Feed List */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Your Feeds
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Click on a feed to view its items
+              </p>
+            </div>
+            <div className="p-6">
+              {loading ? (
+                <LoadingSpinner text="Loading feeds..." />
+              ) : feeds.length === 0 ? (
+                <div className="text-center py-8">
+                  <Rss className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No feeds yet. Add your first RSS feed to get started!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {feeds.map((feed) => (
+                    <div
+                      key={feed._id}
+                      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-300 dark:hover:border-primary-600 transition-colors cursor-pointer group"
+                      onClick={() => handleFeedClick(feed._id, feed.name)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                            {feed.name}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                            {feed.url}
+                          </p>
+                        </div>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          {new Date(feed.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Add Feed Form */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Add New Feed
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Subscribe to a new RSS feed
+              </p>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleAddFeed} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Feed Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newFeed.name}
+                    onChange={(e) => setNewFeed({ ...newFeed, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                    placeholder="e.g., Tech News"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Feed URL
+                  </label>
+                  <input
+                    type="url"
+                    value={newFeed.url}
+                    onChange={(e) => setNewFeed({ ...newFeed, url: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                    placeholder="e.g., https://example.com/rss"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  {loading ? 'Adding Feed...' : 'Add Feed'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// Feed Items View Component (Same UI with Firebase integration)
+const FeedItemsView = () => {
+  const { user } = useAuth();
+  const [feedItems, setFeedItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
+  // FIX: Use useParams to correctly get the route parameter
+  const { feedId } = useParams(); 
+  
+  const feedName = location.state?.feedName || 'Feed';
+
+  const apiCall = async (endpoint, options = {}) => {
+    setLoading(true);
+    setError('');
+
+    const token = await user.getIdToken();
+    
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Something went wrong');
+      }
+
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFeedItems = async () => {
+    try {
+      // Ensure feedId is available before calling the API
+      if (!feedId) {
+        setError('Feed ID is missing.');
+        return;
+      }
+      const data = await apiCall(`/api/feeds/${feedId}`);
+      setFeedItems(data.items || []);
+    } catch (err) {
+      // Error handled in apiCall
+    }
+  };
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  useEffect(() => {
+    if (user && feedId) {
+      fetchFeedItems();
+    }
+  }, [user, feedId]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleBackToDashboard}
+                className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Dashboard</span>
+              </button>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                {feedName}
+              </h1>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-0">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-700 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Latest Items
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                {feedItems.length} items found
+              </p>
+            </div>
+
+            <div className="p-6">
+              {loading ? (
+                <LoadingSpinner text="Loading feed items..." />
+              ) : feedItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <Rss className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No items found in this feed.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {feedItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+                    >
+                      <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                        {item.title}
+                      </h3>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
+                      >
+                        Read full article
+                        <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <LoadingSpinner text="Loading..." />
+      </div>
+    );
+  }
+  
+  return user ? children : <Navigate to="/login" />;
+};
+
+// Public Route Component
+const PublicRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? <Navigate to="/dashboard" /> : children;
+};
+
+// App Content with Routing
+const AppContent = () => {
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={
+        <PublicRoute>
+          <Navigate to="/login" replace />
+        </PublicRoute>
+      } />
+      
+      <Route path="/login" element={
+        <PublicRoute>
+          <LoginScreen />
+        </PublicRoute>
+      } />
+      
+      <Route path="/signup" element={
+        <PublicRoute>
+          <SignupScreen />
+        </PublicRoute>
+      } />
+
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/feeds/:feedId" element={
+        <ProtectedRoute>
+          <FeedItemsView />
+        </ProtectedRoute>
+      } />
+
+      {/* Catch all route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
+
+// Main App Component
 const App = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-          <span className="text-white text-2xl">📰</span>
-        </div>
-        
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-          RSS Generator Pro
-        </h1>
-        
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Professional RSS Feed Aggregator
-        </p>
-
-        <div className="space-y-3">
-          <button className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
-            Login with Email
-          </button>
-          
-          <button className="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-            <span>🚀</span>
-            Continue with Google
-          </button>
-        </div>
-
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
-          Firebase Authentication • Professional UI • Mobile Responsive
-        </p>
-      </div>
-    </div>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 };
 
