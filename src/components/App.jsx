@@ -2,13 +2,14 @@ import React, { useState, useEffect, useContext, createContext, Suspense, useCal
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft, AlertTriangle, Loader, Lock, Mail, UserPlus, LogIn } from 'lucide-react';
 
-// Firebase imports - Ab yeh sab App.jsx ke andar hi use honge.
+// Firebase imports - Yeh saare imports App.jsx ke andar hi use honge.
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev';
 
 // Global Firebase variables ko use karne ke liye setup
+// Agar variables Canvas se nahi milein, toh default null set karein.
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -28,6 +29,13 @@ const AuthProvider = ({ children }) => {
     useEffect(() => {
         let auth;
         try {
+            // Agar config nahi mili, toh auth process nahi shuru ho sakta
+            if (!firebaseConfig) {
+                 console.error("Firebase configuration is null. Waiting for environment to provide config.");
+                 setLoading(false); 
+                 return; 
+            }
+            
             const app = initializeApp(firebaseConfig, appId);
             auth = getAuth(app);
             setAuthInstance(auth);
@@ -43,17 +51,21 @@ const AuthProvider = ({ children }) => {
                 setUser(currentUser);
                 setLoading(false);
             } else {
-                // Initial sign-in logic
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                        // onAuthStateChanged will handle setting the user
-                    } else {
-                        await signInAnonymously(auth);
-                        // onAuthStateChanged will handle setting the user
+                // Initial sign-in logic (only if auth instance exists)
+                if (auth) {
+                     try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                            // onAuthStateChanged will handle setting the user
+                        } else {
+                            await signInAnonymously(auth);
+                            // onAuthStateChanged will handle setting the user
+                        }
+                    } catch (e) {
+                        console.error("Initial auth sign-in failed (Custom or Anonymous):", e);
+                        setLoading(false);
                     }
-                } catch (e) {
-                    console.error("Initial auth sign-in failed:", e);
+                } else {
                     setLoading(false);
                 }
             }
@@ -452,6 +464,8 @@ const Dashboard = () => {
 
       setNewFeed({ name: '', url: '' });
       setSuccess('Feed added successfully!');
+      // Error ko clear karein agar koi pehle se ho
+      setError('');
       fetchFeeds();
     } catch (err) {
       // Error handled in apiCall
@@ -925,6 +939,7 @@ const ProtectedRoute = ({ children }) => {
 // Public Route Component
 const PublicRoute = ({ children }) => {
   const { user } = useAuth();
+  // Agar user authenticated hai, toh dashboard par redirect karein.
   return user ? <Navigate to="/dashboard" /> : children;
 };
 
@@ -939,7 +954,6 @@ const AppContent = () => {
         </PublicRoute>
       } />
       
-      {/* Ab yeh components App.jsx ke andar hi define kiye gaye hain, no imports needed */}
       <Route path="/login" element={
         <PublicRoute>
           <LoginScreen />
@@ -973,24 +987,7 @@ const AppContent = () => {
 
 // Main App Component
 const App = () => {
-  // Check if firebase config is available.
-  const isConfigAvailable = firebaseConfig && Object.keys(firebaseConfig).length > 0;
-
-  if (!isConfigAvailable) {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-xl max-w-md w-full text-center">
-                <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto mb-4" />
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                    Configuration Error
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                    Firebase configuration missing. Application shuru nahi ho sakta.
-                </p>
-            </div>
-        </div>
-    );
-  }
+  // Configuration check removed. App will now start immediately and rely on AuthProvider's loading state.
 
   return (
     <Router>
