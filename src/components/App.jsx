@@ -1,16 +1,315 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, createContext, Suspense, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
-// FIX: Path ko theek kiya gaya hai. src/components/ se src/ tak jaane ke liye sirf ek ../ ki zaroorat hai, phir sidhe folder ka naam.
-import { AuthProvider, useAuth } from '../context/AuthContext'; 
-import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft } from 'lucide-react';
-// FIX: Path ko theek kiya gaya hai.
-import LoginScreen from '../screens/LoginScreen';
-// FIX: Path ko theek kiya gaya hai.
-import SignupScreen from '../screens/SignupScreen';
+import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft, AlertTriangle, Loader, Lock, Mail, UserPlus, LogIn } from 'lucide-react';
+
+// Firebase imports - Ab yeh sab App.jsx ke andar hi use honge.
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev';
 
-// Loading Spinner Component
+// Global Firebase variables ko use karne ke liye setup
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// ----------------------------------------------------------------------
+// 1. CONSOLIDATED AUTH CONTEXT & PROVIDER
+// ----------------------------------------------------------------------
+const AuthContext = createContext();
+export const useAuth = () => useContext(AuthContext);
+
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [authInstance, setAuthInstance] = useState(null);
+
+    // Initial Firebase and Auth setup
+    useEffect(() => {
+        let auth;
+        try {
+            const app = initializeApp(firebaseConfig, appId);
+            auth = getAuth(app);
+            setAuthInstance(auth);
+            console.log("Firebase App Initialized.");
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            setLoading(false);
+            return;
+        }
+
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                setLoading(false);
+            } else {
+                // Initial sign-in logic
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        // onAuthStateChanged will handle setting the user
+                    } else {
+                        await signInAnonymously(auth);
+                        // onAuthStateChanged will handle setting the user
+                    }
+                } catch (e) {
+                    console.error("Initial auth sign-in failed:", e);
+                    setLoading(false);
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Auth functions
+    const signup = useCallback(async (email, password) => {
+        if (!authInstance) throw new Error("Authentication service not available.");
+        setLoading(true);
+        try {
+            const userCredential = await createUserWithEmailAndPassword(authInstance, email, password);
+            setUser(userCredential.user);
+        } finally {
+            setLoading(false);
+        }
+    }, [authInstance]);
+
+    const login = useCallback(async (email, password) => {
+        if (!authInstance) throw new Error("Authentication service not available.");
+        setLoading(true);
+        try {
+            const userCredential = await signInWithEmailAndPassword(authInstance, email, password);
+            setUser(userCredential.user);
+        } finally {
+            setLoading(false);
+        }
+    }, [authInstance]);
+
+    const logout = useCallback(async () => {
+        if (!authInstance) throw new Error("Authentication service not available.");
+        await signOut(authInstance);
+        setUser(null);
+    }, [authInstance]);
+
+    const value = { user, loading, signup, login, logout, authInstance };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+// ----------------------------------------------------------------------
+
+// ----------------------------------------------------------------------
+// 2. CONSOLIDATED LOGIN SCREEN
+// ----------------------------------------------------------------------
+const LoginScreen = () => {
+    const { login, loading } = useAuth();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        try {
+            await login(email, password);
+            navigate('/dashboard');
+        } catch (err) {
+            setError(err.message.includes('auth/invalid-credential') ? 'Invalid email or password.' : err.message);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+            <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 border-t-4 border-primary-600">
+                <div className="flex justify-center mb-6">
+                    <LogIn className="w-10 h-10 text-primary-600" />
+                </div>
+                <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-2">
+                    Vaapas Aayen
+                </h2>
+                <p className="text-center text-gray-500 dark:text-gray-400 mb-8">
+                    Apne account mein login karein
+                </p>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Email Address
+                        </label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                                placeholder="apka@email.com"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                                placeholder="********"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
+                            <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
+                    >
+                        {loading ? <Loader className="w-5 h-5 mr-2 animate-spin" /> : <LogIn className="w-5 h-5 mr-2" />}
+                        {loading ? 'Logging In...' : 'Login Karein'}
+                    </button>
+                </form>
+
+                <div className="mt-8 text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Naye user hain?{' '}
+                        <button
+                            onClick={() => navigate('/signup')}
+                            className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                        >
+                            Account Banayein
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+// ----------------------------------------------------------------------
+
+// ----------------------------------------------------------------------
+// 3. CONSOLIDATED SIGNUP SCREEN
+// ----------------------------------------------------------------------
+const SignupScreen = () => {
+    const { signup, loading } = useAuth();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters long.");
+            return;
+        }
+        try {
+            await signup(email, password);
+            navigate('/dashboard');
+        } catch (err) {
+            setError(err.message.includes('auth/email-already-in-use') ? 'This email is already in use.' : err.message);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+            <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 border-t-4 border-primary-600">
+                <div className="flex justify-center mb-6">
+                    <UserPlus className="w-10 h-10 text-primary-600" />
+                </div>
+                <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-2">
+                    Naya Account Banayein
+                </h2>
+                <p className="text-center text-gray-500 dark:text-gray-400 mb-8">
+                    RSS Feed Manager mein shamil hon
+                </p>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Email Address
+                        </label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                                placeholder="apka@email.com"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Password (Minimum 6 characters)
+                        </label>
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                                placeholder="********"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
+                            <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
+                    >
+                        {loading ? <Loader className="w-5 h-5 mr-2 animate-spin" /> : <UserPlus className="w-5 h-5 mr-2" />}
+                        {loading ? 'Creating Account...' : 'Sign Up Karein'}
+                    </button>
+                </form>
+
+                <div className="mt-8 text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Pehle se account hai?{' '}
+                        <button
+                            onClick={() => navigate('/login')}
+                            className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                        >
+                            Login Karein
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+// ----------------------------------------------------------------------
+
+// Loading Spinner Component (Same UI)
 const LoadingSpinner = ({ size = 'medium', text = 'Loading...' }) => {
   const sizeClasses = {
     small: 'w-4 h-4',
@@ -83,7 +382,7 @@ const Header = ({ username, onLogout, darkMode, toggleDarkMode }) => {
   );
 };
 
-// Dashboard Component (Same UI with Firebase integration)
+// Dashboard Component (Same UI with Backend API integration)
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [feeds, setFeeds] = useState([]);
@@ -98,22 +397,25 @@ const Dashboard = () => {
     setLoading(true);
     setError('');
 
-    const token = await user.getIdToken();
-    
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    if (config.body && typeof config.body === 'object') {
-      config.body = JSON.stringify(config.body);
-    }
-
     try {
+      if (!user) {
+        throw new Error('Authentication not ready.');
+      }
+      const token = await user.getIdToken();
+    
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers,
+        },
+        ...options,
+      };
+
+      if (config.body && typeof config.body === 'object') {
+        config.body = JSON.stringify(config.body);
+      }
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
       const data = await response.json();
 
@@ -131,6 +433,7 @@ const Dashboard = () => {
   };
 
   const fetchFeeds = async () => {
+    if (!user) return;
     try {
       const data = await apiCall('/api/feeds');
       setFeeds(data);
@@ -309,7 +612,7 @@ const Dashboard = () => {
   );
 };
 
-// Feed Items View Component (Same UI with Firebase integration)
+// Feed Items View Component (Same UI with Backend API and Gemini integration)
 const FeedItemsView = () => {
   const { user } = useAuth();
   const [feedItems, setFeedItems] = useState([]);
@@ -322,7 +625,6 @@ const FeedItemsView = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  // FIX: Use useParams to correctly get the route parameter
   const { feedId } = useParams(); 
   
   const feedName = location.state?.feedName || 'Feed';
@@ -357,18 +659,21 @@ const FeedItemsView = () => {
     setLoading(true);
     setError('');
 
-    const token = await user.getIdToken();
-    
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers,
-      },
-      ...options,
-    };
-
     try {
+      if (!user) {
+        throw new Error('Authentication not ready.');
+      }
+      const token = await user.getIdToken();
+    
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers,
+        },
+        ...options,
+      };
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
       const data = await response.json();
 
@@ -386,12 +691,8 @@ const FeedItemsView = () => {
   };
 
   const fetchFeedItems = async () => {
+    if (!user || !feedId) return;
     try {
-      // Ensure feedId is available before calling the API
-      if (!feedId) {
-        setError('Feed ID is missing.');
-        return;
-      }
       const data = await apiCall(`/api/feeds/${feedId}`);
       setFeedItems(data.items || []);
     } catch (err) {
@@ -562,6 +863,50 @@ const FeedItemsView = () => {
   );
 };
 
+// Error Boundary Component for Runtime Debugging
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error("Uncaught error:", error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-red-50 dark:bg-red-900/20 p-4">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-lg w-full text-center border-t-4 border-red-500">
+                        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            Aapki Application Crash Ho Gayi Hai!
+                        </h1>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                            Component render hote samay koi samasya aayi hai.
+                        </p>
+                        <details className="text-left bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+                            <summary className="font-semibold cursor-pointer text-red-600 dark:text-red-400">
+                                Technical Details Dekhein
+                            </summary>
+                            <pre className="mt-2 whitespace-pre-wrap break-words overflow-auto">
+                                {this.state.error && this.state.error.toString()}
+                            </pre>
+                        </details>
+                    </div>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -569,7 +914,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <LoadingSpinner text="Loading..." />
+        <LoadingSpinner text="Authentication Check Ho Rahi Hai..." />
       </div>
     );
   }
@@ -594,6 +939,7 @@ const AppContent = () => {
         </PublicRoute>
       } />
       
+      {/* Ab yeh components App.jsx ke andar hi define kiye gaye hain, no imports needed */}
       <Route path="/login" element={
         <PublicRoute>
           <LoginScreen />
@@ -627,11 +973,34 @@ const AppContent = () => {
 
 // Main App Component
 const App = () => {
+  // Check if firebase config is available.
+  const isConfigAvailable = firebaseConfig && Object.keys(firebaseConfig).length > 0;
+
+  if (!isConfigAvailable) {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-xl max-w-md w-full text-center">
+                <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto mb-4" />
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                    Configuration Error
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                    Firebase configuration missing. Application shuru nahi ho sakta.
+                </p>
+            </div>
+        </div>
+    );
+  }
+
   return (
     <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingSpinner text="Component load ho rahe hain..." />}>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+        </Suspense>
+      </ErrorBoundary>
     </Router>
   );
 };
