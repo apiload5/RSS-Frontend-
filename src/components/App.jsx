@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
-// FIX: File resolution error ko theek karne ke liye '../context/AuthContext' ko './context/AuthContext' mein badal diya gaya hai (assuming it's relative to the main app root)
+// FIX: Path ko theek kiya gaya hai. src/components/ se src/ tak jaane ke liye sirf ek ../ ki zaroorat hai, phir sidhe folder ka naam.
 import { AuthProvider, useAuth } from '../context/AuthContext'; 
 import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft } from 'lucide-react';
-// FIX: File resolution error ko theek karne ke liye '../screens/' ko './screens/' mein badal diya gaya hai.
+// FIX: Path ko theek kiya gaya hai.
 import LoginScreen from '../screens/LoginScreen';
+// FIX: Path ko theek kiya gaya hai.
 import SignupScreen from '../screens/SignupScreen';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev';
