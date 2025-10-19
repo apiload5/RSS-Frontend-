@@ -3,8 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './',  // موجودہ ڈائریکٹری
-  build: {
-    outDir: 'dist'
-  }
+  base: '/RSS-Frontend-/'
 })
