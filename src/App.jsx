@@ -569,7 +569,7 @@ const SignupScreen = ({ onBackToHome }) => {
 
 // Dashboard Component
 // Dashboard component میں FeedManager include karen
-import FeedManager from '../components/FeedManager';
+import FeedManager from './components/FeedManager';
 
 const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
   const { user } = useAuth();
