@@ -568,21 +568,21 @@ const SignupScreen = ({ onBackToHome }) => {
 };
 
 // Dashboard Component
+// Dashboard component میں FeedManager include karen
+import FeedManager from '../components/FeedManager';
+
 const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
   const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header 
-        username={user?.email} 
-        onLogout={onLogout}
-        darkMode={darkMode}
-        toggleDarkMode={toggleDarkMode}
-      />
-
+      {/* Header same rahega */}
+      
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 sm:px-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+          
+          {/* Welcome Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 mb-6">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <User className="w-10 h-10 text-white" />
@@ -590,56 +590,20 @@ const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Welcome, {user?.email}!
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                You are successfully logged in to RSS Generator Pro
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage your RSS feeds and stay updated with latest news
               </p>
-              
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">User Information:</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Email: {user?.email}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  UID: {user?.uid}
-                </p>
-              </div>
-
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
-                  <Plus className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                  <h4 className="font-medium text-gray-900 dark:text-white">Add Feeds</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Add RSS feeds</p>
-                </div>
-                
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
-                  <Rss className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                  <h4 className="font-medium text-gray-900 dark:text-white">Manage Feeds</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Organize your content</p>
-                </div>
-                
-                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
-                  <Globe className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
-                  <h4 className="font-medium text-gray-900 dark:text-white">Read News</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Stay updated</p>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <button 
-                  onClick={() => alert('RSS Feed Management Coming Soon!')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                >
-                  Manage RSS Feeds
-                </button>
-              </div>
             </div>
           </div>
+
+          {/* RSS Feed Manager */}
+          <FeedManager />
+          
         </div>
       </main>
     </div>
   );
 };
-
 // Main App Component
 function App() {
   const [darkMode, setDarkMode] = useState(false);
