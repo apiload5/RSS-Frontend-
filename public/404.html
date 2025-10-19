@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>RSS Generator Pro</title>
+    <script type="text/javascript">
+      // Single Page App (SPA) fix for GitHub Pages
+      const segmentCount = 0;
+      const l = window.location;
+      const base = l.pathname.split('/').slice(0, 1 + segmentCount).join('/');
+      l.replace(
+        l.protocol + '//' + l.host + base + '/' +
+        '?p=/' + l.pathname.slice(base.length + 1).replace(/&/g, '~and~') +
+        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <h1>RSS Generator Pro</h1>
+      <p>Please enable JavaScript to use this application.</p>
+    </noscript>
+  </body>
+</html>
