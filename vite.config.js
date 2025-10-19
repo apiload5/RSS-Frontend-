@@ -7,8 +7,9 @@ export default defineConfig({
     port: 3000,
     open: true
   },
-  define: {
-    'process.env': process.env
-  },
-  base: '/RSS-Frontend-/'
+  base: '/RSS-Frontend-/',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets'
+  }
 })
