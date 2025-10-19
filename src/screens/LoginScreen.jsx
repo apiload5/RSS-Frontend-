@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { IoMail, IoLockClosed, IoLogoGoogle, IoArrowForward, IoArrowBack } from 'react-icons/io5';
+import { IoMail, IoLockClosed, IoLogoGoogle, IoArrowForward, IoArrowBack, IoEye, IoEyeOff } from 'react-icons/io5';
 
-const LoginScreen = () => {
+const LoginScreen = ({ onBackToHome }) => {
   const navigate = useNavigate();
   const { signIn, signInWithGoogle, user, loading, error, success, clearMessages } = useAuth();
   
@@ -11,6 +11,7 @@ const LoginScreen = () => {
     email: '',
     password: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -47,15 +48,15 @@ const LoginScreen = () => {
     }
   };
 
-  const handleBackToHome = () => {
-    navigate('/');
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <button
-          onClick={handleBackToHome}
+          onClick={onBackToHome}
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-6 transition-colors"
         >
           <IoArrowBack className="w-4 h-4" />
@@ -64,7 +65,7 @@ const LoginScreen = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mx-auto mb-4">
+            <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mx-auto mb-4">
               <IoMail className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
@@ -78,7 +79,7 @@ const LoginScreen = () => {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center space-x-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 py-3 px-4 rounded-lg font-medium transition-colors duration-200 mb-6"
+            className="w-full flex items-center justify-center space-x-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 py-3 px-4 rounded-lg font-medium transition-colors duration-200 mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <IoLogoGoogle className="w-5 h-5 text-red-500" />
             <span>{loading ? 'Signing In...' : 'Continue with Google'}</span>
@@ -105,7 +106,7 @@ const LoginScreen = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Enter your email"
                   required
                   disabled={loading}
@@ -120,31 +121,51 @@ const LoginScreen = () => {
               <div className="relative">
                 <IoLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="Enter your password"
                   required
                   disabled={loading}
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? <IoEyeOff className="w-5 h-5" /> : <IoEye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing In...' : <><span>Sign In</span><IoArrowForward className="w-5 h-5 ml-2" /></>}
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Signing In...
+                </div>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <IoArrowForward className="w-5 h-5 ml-2" />
+                </>
+              )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium">
+              <Link
+                to="/signup"
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+              >
                 Sign up here
               </Link>
             </p>
