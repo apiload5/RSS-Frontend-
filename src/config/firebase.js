@@ -1,18 +1,21 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
+// آپ کی Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBUp4eQaNFh1zZwt9hBJDssmc-Bdd2FjWk",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "aggregator-backend.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "aggregator-backend",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "aggregator-backend.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "113222278115049707259",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1132222781150:web:d25206272ff7e44a30292b"
+  apiKey: "AIzaSyBUp4eQaNFh1zZwt9hBJDssmc-Bdd2FjWk",
+  authDomain: "aggregator-backend.firebaseapp.com",
+  projectId: "aggregator-backend",
+  storageBucket: "aggregator-backend.appspot.com",
+  messagingSenderId: "113222278115049707259",
+  appId: "1:1132222781150:web:d25206272ff7e44a30292b"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication and get a reference to the service
+// Initialize Firebase Authentication
 export const auth = getAuth(app);
+
+// Firebase app export
 export default app;
