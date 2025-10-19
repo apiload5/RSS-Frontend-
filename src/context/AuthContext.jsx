@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }) => {
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev/';
 
+  // Backend verification function
   const verifyWithBackend = async (firebaseUser) => {
     try {
       const token = await firebaseUser.getIdToken();
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }) => {
 
       const userData = await response.json();
       
+      // Combine Firebase user with backend data
       const completeUser = {
         ...firebaseUser,
         backendData: userData
@@ -53,10 +55,12 @@ export const AuthProvider = ({ children }) => {
       return completeUser;
     } catch (error) {
       console.error('Backend verification error:', error);
-      throw new Error('Failed to verify user with backend');
+      // Return Firebase user even if backend fails
+      return firebaseUser;
     }
   };
 
+  // Sign up with email and password
   const signUp = async (email, password) => {
     try {
       setError('');
@@ -93,6 +97,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Sign in with email and password
   const signIn = async (email, password) => {
     try {
       setError('');
@@ -129,6 +134,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Sign in with Google
   const signInWithGoogle = async () => {
     try {
       setError('');
@@ -163,6 +169,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Sign out
   const logout = async () => {
     try {
       setError('');
@@ -175,11 +182,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Clear messages
   const clearMessages = () => {
     setError('');
     setSuccess('');
   };
 
+  // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
@@ -191,7 +200,7 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Auth state change error:', error);
-        setUser(null);
+        setUser(firebaseUser); // Still set Firebase user even if backend fails
       } finally {
         setLoading(false);
       }
@@ -214,7 +223,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
