@@ -25,41 +25,6 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://d8f24516-21d6-4940-8fc5-6f1bf97f7cba-00-oxbrlkzbcc08.sisko.replit.dev/';
-
-  // Backend verification function
-  const verifyWithBackend = async (firebaseUser) => {
-    try {
-      const token = await firebaseUser.getIdToken();
-      
-      const response = await fetch(`${BACKEND_URL}api/users/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Backend verification failed');
-      }
-
-      const userData = await response.json();
-      
-      // Combine Firebase user with backend data
-      const completeUser = {
-        ...firebaseUser,
-        backendData: userData
-      };
-      
-      return completeUser;
-    } catch (error) {
-      console.error('Backend verification error:', error);
-      // Return Firebase user even if backend fails
-      return firebaseUser;
-    }
-  };
-
   // Sign up with email and password
   const signUp = async (email, password) => {
     try {
@@ -67,12 +32,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const completeUser = await verifyWithBackend(userCredential.user);
+      const user = userCredential.user;
       
-      setUser(completeUser);
+      setUser(user);
       setSuccess('Account created successfully!');
+      console.log('User signed up:', user.email);
       
-      return completeUser;
+      return user;
     } catch (error) {
       let errorMessage = 'Failed to create account';
       
@@ -84,13 +50,14 @@ export const AuthProvider = ({ children }) => {
           errorMessage = 'Invalid email address';
           break;
         case 'auth/weak-password':
-          errorMessage = 'Password is too weak';
+          errorMessage = 'Password should be at least 6 characters';
           break;
         default:
           errorMessage = error.message;
       }
       
       setError(errorMessage);
+      console.error('Sign up error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -104,12 +71,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const completeUser = await verifyWithBackend(userCredential.user);
+      const user = userCredential.user;
       
-      setUser(completeUser);
+      setUser(user);
       setSuccess('Signed in successfully!');
+      console.log('User signed in:', user.email);
       
-      return completeUser;
+      return user;
     } catch (error) {
       let errorMessage = 'Failed to sign in';
       
@@ -123,11 +91,15 @@ export const AuthProvider = ({ children }) => {
         case 'auth/invalid-email':
           errorMessage = 'Invalid email address';
           break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many attempts. Try again later';
+          break;
         default:
           errorMessage = error.message;
       }
       
       setError(errorMessage);
+      console.error('Sign in error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -141,13 +113,18 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
       const userCredential = await signInWithPopup(auth, provider);
-      const completeUser = await verifyWithBackend(userCredential.user);
+      const user = userCredential.user;
       
-      setUser(completeUser);
+      setUser(user);
       setSuccess('Signed in with Google successfully!');
+      console.log('Google sign in successful:', user.email);
       
-      return completeUser;
+      return user;
     } catch (error) {
       let errorMessage = 'Failed to sign in with Google';
       
@@ -158,11 +135,15 @@ export const AuthProvider = ({ children }) => {
         case 'auth/popup-blocked':
           errorMessage = 'Popup was blocked by browser';
           break;
+        case 'auth/unauthorized-domain':
+          errorMessage = 'This domain is not authorized';
+          break;
         default:
           errorMessage = error.message;
       }
       
       setError(errorMessage);
+      console.error('Google sign in error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -176,8 +157,10 @@ export const AuthProvider = ({ children }) => {
       await signOut(auth);
       setUser(null);
       setSuccess('Signed out successfully!');
+      console.log('User signed out');
     } catch (error) {
       setError('Failed to sign out');
+      console.error('Logout error:', error);
       throw error;
     }
   };
@@ -190,17 +173,18 @@ export const AuthProvider = ({ children }) => {
 
   // Auth state listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       try {
         if (firebaseUser) {
-          const completeUser = await verifyWithBackend(firebaseUser);
-          setUser(completeUser);
+          setUser(firebaseUser);
+          console.log('User state changed - logged in:', firebaseUser.email);
         } else {
           setUser(null);
+          console.log('User state changed - logged out');
         }
       } catch (error) {
         console.error('Auth state change error:', error);
-        setUser(firebaseUser); // Still set Firebase user even if backend fails
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -223,7 +207,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
