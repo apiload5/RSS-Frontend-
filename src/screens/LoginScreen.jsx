@@ -14,7 +14,9 @@ const LoginScreen = ({ onBackToHome }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    console.log('LoginScreen - User state:', user);
     if (user) {
+      console.log('User is authenticated, redirecting to dashboard...');
       navigate('/dashboard');
     }
   }, [user, navigate]);
@@ -33,18 +35,26 @@ const LoginScreen = ({ onBackToHome }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Login form submitted:', formData.email);
+    
     try {
       await signIn(formData.email, formData.password);
+      // Navigation will happen automatically due to useEffect
     } catch (error) {
-      // Error handled in context
+      console.log('Login failed:', error);
+      // Error is handled in the context
     }
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('Google sign in initiated');
+    
     try {
       await signInWithGoogle();
+      // Navigation will happen automatically due to useEffect
     } catch (error) {
-      // Error handled in context
+      console.log('Google sign in failed:', error);
+      // Error is handled in the context
     }
   };
 
