@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft, Star, Check, Zap, Users, Globe, Mail, ArrowRight, Play } from 'lucide-react';
 import { IoLogoGoogle, IoMail, IoLockClosed, IoPerson, IoArrowForward, IoArrowBack } from 'react-icons/io5';
-
+import RSSCreator from './components/RSSCreator';
 // Firebase Context
 import { useAuth } from './context/AuthContext';
 
@@ -596,6 +596,70 @@ const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
             </div>
           </div>
 
+// Dashboard component mein
+const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('creator'); // 'creator' or 'reader'
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header 
+        username={user?.email} 
+        onLogout={onLogout}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
+
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-0">
+          
+          {/* Welcome Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 mb-6">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Welcome, {user?.email}!
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create RSS feeds from any website or read your existing feeds
+              </p>
+            </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="flex space-x-4 mb-6">
+            <button
+              onClick={() => setActiveTab('creator')}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'creator'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              🚀 Create RSS Feeds
+            </button>
+            <button
+              onClick={() => setActiveTab('reader')}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'reader'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              📖 Read Feeds
+            </button>
+          </div>
+
+          {/* Content */}
+          {activeTab === 'creator' ? <RSSCreator /> : <FeedManager />}
+          
+        </div>
+      </main>
+    </div>
+  );
+};
           {/* RSS Feed Manager */}
           <FeedManager />
           
