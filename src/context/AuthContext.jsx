@@ -195,6 +195,31 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+// Sign in with Google function ke BAAD yeh add karen:
+
+// Create RSS Feed from any website
+const createRSSFeed = async (websiteUrl) => {
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    const response = await fetch(`${BACKEND_URL}/api/rss/create`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ websiteUrl }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create RSS feed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Create RSS feed error:', error);
+    throw error;
+  }
+};
 
   // Sign out
   const logout = async () => {
@@ -271,17 +296,18 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    signUp,
-    signIn,
-    signInWithGoogle,
-    logout,
-    loading,
-    error,
-    success,
-    clearMessages,
-    getUserFeeds,
-    addFeed,
-    getFeedItems
+  signUp,
+  signIn,
+  signInWithGoogle,
+  logout,
+  loading,
+  error,
+  success,
+  clearMessages,
+  getUserFeeds,
+  addFeed,
+  getFeedItems,
+  createRSSFeed, 
   };
 
   return (
