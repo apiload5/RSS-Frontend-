@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'reac
 import { Rss, Sun, Moon, User, LogOut, Home, Plus, ArrowLeft, Star, Check, Zap, Users, Globe, Mail, ArrowRight, Play } from 'lucide-react';
 import { IoLogoGoogle, IoMail, IoLockClosed, IoPerson, IoArrowForward, IoArrowBack } from 'react-icons/io5';
 import RSSCreator from './components/RSSCreator';
+import FeedManager from './components/FeedManager';
 // Firebase Context
 import { useAuth } from './context/AuthContext';
 
@@ -568,35 +569,6 @@ const SignupScreen = ({ onBackToHome }) => {
 };
 
 // Dashboard Component
-// Dashboard component میں FeedManager include karen
-import FeedManager from './components/FeedManager';
-
-const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
-  const { user } = useAuth();
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header same rahega */}
-      
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 sm:px-0">
-          
-          {/* Welcome Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 mb-6">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-10 h-10 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Welcome, {user?.email}!
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Manage your RSS feeds and stay updated with latest news
-              </p>
-            </div>
-          </div>
-
-// Dashboard component mein
 const Dashboard = ({ onLogout, darkMode, toggleDarkMode }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('creator'); // 'creator' or 'reader'
